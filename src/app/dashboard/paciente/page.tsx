@@ -24,6 +24,7 @@ import { PatientLatestVitals } from '@/components/dashboard/doctor/PatientLatest
 import { PatientVitalsHistory } from '@/components/dashboard/doctor/PatientVitalsHistory'
 import { usePatientVitals } from '@/hooks/use-edge-service'
 import { ClaimDeviceDialog } from '@/components/dashboard/patient/ClaimDeviceDialog' // Import Dialog
+import { RealtimeVitalsCard } from '@/components/dashboard/patient/RealtimeVitalsCard'
 
 export default function PacienteDashboard() {
   const { user } = useAuthContext()
@@ -140,6 +141,8 @@ export default function PacienteDashboard() {
               </Button>
             </div>
           </div>
+
+          <RealtimeVitalsCard />
 
           {/* Vitals Card Integration */}
           {vitalsError?.status === 403 ? (

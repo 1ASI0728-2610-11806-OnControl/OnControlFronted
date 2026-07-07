@@ -220,6 +220,53 @@ Contraseña: paciente123
 ```env
 NEXT_PUBLIC_APP_NAME=OnControl
 NEXT_PUBLIC_APP_VERSION=1.0.0
+NEXT_PUBLIC_API_URL=https://oncontrol-backend-grupo2.onrender.com
+NEXT_PUBLIC_EDGE_API_URL=https://oncontrol-edgeservice-grupo2.onrender.com
+```
+
+Para prueba local de la demo IoT:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8080
+NEXT_PUBLIC_EDGE_API_URL=http://localhost:5000
+```
+
+La card `RealtimeVitalsCard` consume `GET ${NEXT_PUBLIC_EDGE_API_URL}/OnControl/parameters/latest-demo` cada 3000 ms y se muestra en el dashboard del paciente.
+
+## Deploy en Vercel
+
+Build command:
+
+```bash
+npm run build
+```
+
+Output framework:
+
+```text
+Next.js
+```
+
+Variables en Vercel:
+
+```env
+NEXT_PUBLIC_API_URL=https://oncontrol-backend-grupo2.onrender.com
+NEXT_PUBLIC_EDGE_API_URL=https://oncontrol-edgeservice-grupo2.onrender.com
+```
+
+Pruebas despues del deploy:
+
+- Abrir `/demo-iot` para validar la integracion IoT sin login.
+- Abrir `/auth/login` y probar credenciales demo del backend.
+- Entrar como paciente y validar `/dashboard/paciente`.
+- Confirmar que la card IoT se actualiza cada 3 segundos cuando EdgeService recibe datos.
+
+Credenciales demo esperadas si el backend fue desplegado con base vacia y seed activo:
+
+```text
+admin.grupo2@oncontrol.com / OnControl2026!
+doctor.grupo2@oncontrol.com / OnControl2026!
+paciente.grupo2@oncontrol.com / OnControl2026!
 ```
 
 ### Scripts Disponibles

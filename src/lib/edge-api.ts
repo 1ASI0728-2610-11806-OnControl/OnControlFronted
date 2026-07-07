@@ -1,18 +1,35 @@
 // Edge Service API Client
-// Handles communication with the local Python/Flask Edge Service (via ngrok)
+// Handles communication with the Python/Flask EdgeService.
 
-const EDGE_API_URL = process.env.NEXT_PUBLIC_EDGE_API_URL || 'https://carrie-resorptive-lorelei.ngrok-free.dev';
+const EDGE_API_URL = process.env.NEXT_PUBLIC_EDGE_API_URL || 'https://oncontrol-edgeservice-grupo2.onrender.com';
+
+type RawEdgeHealthRecord = {
+  id?: number;
+  device_id?: string;
+  timestamp?: string;
+  created_at?: string;
+  bpm?: number | string;
+  spo2?: number | string;
+  temp?: number | string;
+  temperature?: number | string;
+  patient_id?: number;
+  is_critical?: boolean;
+};
 
 export interface EdgeHealthRecord {
-  id: number;
+  id?: number;
   device_id: string;
-  timestamp: string; // ISO string
+  timestamp: string;
+  created_at: string;
   bpm: number;
   spo2: number;
+  temp: number;
   temperature: number;
-  patient_id?: number; // Depending on Edge implementation
+  patient_id?: number;
   is_critical: boolean;
 }
+
+export type LatestHealthParameters = EdgeHealthRecord;
 
 export interface ClaimDeviceRequest {
   device_id: string;
@@ -27,6 +44,7 @@ export interface ClaimDeviceResponse {
 
 export class EdgeApiError extends Error {
   status: number;
+
   constructor(message: string, status: number) {
     super(message);
     this.name = 'EdgeApiError';
@@ -48,6 +66,24 @@ class EdgeApiClient {
     return null;
   }
 
+  private normalizeHealthRecord(record: RawEdgeHealthRecord): EdgeHealthRecord {
+    const createdAt = record.created_at ?? record.timestamp ?? '';
+    const temp = Number(record.temp ?? record.temperature ?? 0);
+
+    return {
+      id: record.id,
+      device_id: record.device_id ?? '',
+      timestamp: createdAt,
+      created_at: createdAt,
+      bpm: Number(record.bpm ?? 0),
+      spo2: Number(record.spo2 ?? 0),
+      temp,
+      temperature: temp,
+      patient_id: record.patient_id,
+      is_critical: Boolean(record.is_critical),
+    };
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -58,8 +94,6 @@ class EdgeApiClient {
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true', // Skip ngrok warning page
-        // Ensure we send the token for IAM validation on the Edge
         ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
@@ -72,15 +106,20 @@ class EdgeApiClient {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Edge API Error:', { url, status: response.status, errorData });
-        // Throw custom error with status
-        throw new EdgeApiError(errorData.message || `Edge Service Error: ${response.status}`, response.status);
+        throw new EdgeApiError(
+          errorData.error || errorData.message || `Edge Service Error: ${response.status}`,
+          response.status
+        );
       }
 
       return await response.json();
     } catch (error) {
-      // Network errors (e.g., ngrok tunnel closed)
+      if (error instanceof EdgeApiError) {
+        throw error;
+      }
+
       console.error('Edge Network Error:', error);
-      throw error;
+      throw new EdgeApiError('No se pudo conectar con EdgeService', 0);
     }
   }
 
@@ -88,9 +127,6 @@ class EdgeApiClient {
   // DEVICE MANAGEMENT
   // ============================================
 
-  /**
-   * Links a specific IoT band (device_id) to the currently logged-in patient.
-   */
   async claimDevice(deviceId: string): Promise<ClaimDeviceResponse> {
     return this.request<ClaimDeviceResponse>('/devices/claim', {
       method: 'POST',
@@ -102,22 +138,21 @@ class EdgeApiClient {
   // VITALS MONITORING
   // ============================================
 
-  /**
-   * Gets the single most recent reading for the current patient.
-   * Optimized for Patient Dashboard "Real-time" view.
-   */
   async getLatestVitals(): Promise<EdgeHealthRecord> {
-    return this.request<EdgeHealthRecord>('/OnControl/parameters/latest');
+    const record = await this.request<RawEdgeHealthRecord>('/OnControl/parameters/latest');
+    return this.normalizeHealthRecord(record);
   }
 
-  /**
-   * Gets all records.
-   * Note: For Doctors, this returns EVERYTHING. Filtering must happen client-side
-   * based on the patient's device_id.
-   */
+  async getLatestHealthParameters(): Promise<LatestHealthParameters> {
+    const record = await this.request<RawEdgeHealthRecord>('/OnControl/parameters/latest-demo');
+    return this.normalizeHealthRecord(record);
+  }
+
   async getAllRecords(): Promise<EdgeHealthRecord[]> {
-    return this.request<EdgeHealthRecord[]>('/OnControl/parameters');
+    const records = await this.request<RawEdgeHealthRecord[]>('/OnControl/parameters');
+    return records.map((record) => this.normalizeHealthRecord(record));
   }
 }
 
 export const edgeApi = new EdgeApiClient(EDGE_API_URL);
+export const getLatestHealthParameters = () => edgeApi.getLatestHealthParameters();
