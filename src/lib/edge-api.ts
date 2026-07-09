@@ -1,7 +1,9 @@
 // Edge Service API Client
 // Handles communication with the Python/Flask EdgeService.
 
+
 const EDGE_API_URL = process.env.NEXT_PUBLIC_EDGE_API_URL || 'https://oncontrol-edgeservice-grupo2.onrender.com';
+
 
 type RawEdgeHealthRecord = {
   id?: number;
