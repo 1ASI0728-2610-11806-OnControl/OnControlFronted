@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Activity, AlertTriangle, CheckCircle2, Droplets, Loader2, RefreshCw, Thermometer } from "lucide-react"
+import { Activity, AlertTriangle, BrainCircuit, CheckCircle2, Droplets, Loader2, RefreshCw, Thermometer } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -70,6 +70,15 @@ export function RealtimeVitalsCard() {
   const statusLabel = data?.is_critical ? "Riesgo" : "Normal"
   const statusIcon = data?.is_critical ? AlertTriangle : CheckCircle2
   const StatusIcon = statusIcon
+  const riskLevel = data?.riskLevel ?? "LOW"
+  const riskBadgeVariant = riskLevel === "HIGH" ? "destructive" : "outline"
+  const riskLevelLabel = riskLevel === "HIGH" ? "Alto" : riskLevel === "MODERATE" ? "Moderado" : "Bajo"
+  const riskLevelClass =
+    riskLevel === "HIGH"
+      ? "border-red-200 bg-red-50 text-red-700"
+      : riskLevel === "MODERATE"
+        ? "border-orange-200 bg-orange-50 text-orange-700"
+        : "border-green-200 bg-green-50 text-green-700"
 
   return (
     <Card className="border-2 border-primary/20 shadow-lg">
@@ -124,38 +133,69 @@ export function RealtimeVitalsCard() {
             Sin datos
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="min-h-32 rounded-lg border border-red-100 bg-red-50/60 p-4">
-              <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-red-700">
-                <Activity className="h-5 w-5" />
-                BPM
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="min-h-32 rounded-lg border border-red-100 bg-red-50/60 p-4">
+                <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-red-700">
+                  <Activity className="h-5 w-5" />
+                  BPM
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-foreground">{data.bpm}</span>
+                  <span className="text-sm text-muted-foreground">lat/min</span>
+                </div>
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold text-foreground">{data.bpm}</span>
-                <span className="text-sm text-muted-foreground">lat/min</span>
+
+              <div className="min-h-32 rounded-lg border border-orange-100 bg-orange-50/60 p-4">
+                <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-orange-700">
+                  <Thermometer className="h-5 w-5" />
+                  Temperatura
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-foreground">{data.temp.toFixed(1)}</span>
+                  <span className="text-sm text-muted-foreground">C</span>
+                </div>
+              </div>
+
+              <div className="min-h-32 rounded-lg border border-blue-100 bg-blue-50/60 p-4">
+                <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-blue-700">
+                  <Droplets className="h-5 w-5" />
+                  SpO2
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-foreground">{data.spo2}</span>
+                  <span className="text-sm text-muted-foreground">%</span>
+                </div>
               </div>
             </div>
 
-            <div className="min-h-32 rounded-lg border border-orange-100 bg-orange-50/60 p-4">
-              <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-orange-700">
-                <Thermometer className="h-5 w-5" />
-                Temperatura
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold text-foreground">{data.temp.toFixed(1)}</span>
-                <span className="text-sm text-muted-foreground">C</span>
-              </div>
-            </div>
+            <div className={cn("rounded-lg border p-4", riskLevelClass)}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <BrainCircuit className="h-5 w-5" />
+                    Alerta preventiva IA
+                  </div>
+                  <p className="text-sm">
+                    {data.aiExplanation || "Sin alerta preventiva generada."}
+                  </p>
+                </div>
 
-            <div className="min-h-32 rounded-lg border border-blue-100 bg-blue-50/60 p-4">
-              <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-blue-700">
-                <Droplets className="h-5 w-5" />
-                SpO2
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Badge variant={riskBadgeVariant}>Riesgo {riskLevelLabel}</Badge>
+                  <Badge variant="outline">Score {data.riskScore}%</Badge>
+                </div>
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold text-foreground">{data.spo2}</span>
-                <span className="text-sm text-muted-foreground">%</span>
-              </div>
+
+              {data.reasons.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {data.reasons.map((reason) => (
+                    <Badge key={reason} variant="secondary">
+                      {reason}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

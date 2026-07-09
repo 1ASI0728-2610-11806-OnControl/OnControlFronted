@@ -14,6 +14,10 @@ type RawEdgeHealthRecord = {
   temperature?: number | string;
   patient_id?: number;
   is_critical?: boolean;
+  riskScore?: number | string;
+  riskLevel?: string;
+  reasons?: string[];
+  aiExplanation?: string;
 };
 
 export interface EdgeHealthRecord {
@@ -27,6 +31,10 @@ export interface EdgeHealthRecord {
   temperature: number;
   patient_id?: number;
   is_critical: boolean;
+  riskScore: number;
+  riskLevel: 'LOW' | 'MODERATE' | 'HIGH' | string;
+  reasons: string[];
+  aiExplanation: string;
 }
 
 export type LatestHealthParameters = EdgeHealthRecord;
@@ -81,6 +89,10 @@ class EdgeApiClient {
       temperature: temp,
       patient_id: record.patient_id,
       is_critical: Boolean(record.is_critical),
+      riskScore: Number(record.riskScore ?? 0),
+      riskLevel: record.riskLevel ?? 'LOW',
+      reasons: Array.isArray(record.reasons) ? record.reasons : [],
+      aiExplanation: record.aiExplanation ?? '',
     };
   }
 
