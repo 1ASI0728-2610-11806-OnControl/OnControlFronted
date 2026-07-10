@@ -28,6 +28,7 @@ import {
   Stethoscope,
   Activity,
   FileText,
+  Wifi,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
@@ -76,6 +77,7 @@ export const DashboardLayout = memo(function DashboardLayout({ children }: Dashb
     { href: "/dashboard/paciente/sintomas", icon: Activity, label: "Síntomas", badge: null },
     { href: "/dashboard/paciente/medicamentos", icon: Stethoscope, label: "Medicamentos", badge: null },
     { href: "/dashboard/paciente/historial", icon: FileText, label: "Historial", badge: null },
+    { href: "/dashboard/paciente/iot", icon: Wifi, label: "Monitor IoT", badge: null },
   ], [])
 
   const navItems = useMemo(() => {
