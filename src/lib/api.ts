@@ -236,6 +236,7 @@ export interface AppointmentNotification {
   appointmentId: number;
   type: 'SCHEDULED' | 'CANCELLED' | 'RESCHEDULED';
   appointmentDate: string;
+  previousAppointmentDate?: string | null;
   createdAt: string;
   readAt: string | null;
 }

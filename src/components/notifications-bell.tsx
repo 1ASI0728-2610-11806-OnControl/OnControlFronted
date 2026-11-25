@@ -105,9 +105,24 @@ export function NotificationsBell({ appointmentsHref }: { appointmentsHref: stri
             {inbox?.items.map((item) => (
               <li key={item.id} className={item.readAt ? "px-4 py-3" : "bg-primary/5 px-4 py-3"}>
                 <p className={item.readAt ? "text-sm" : "text-sm font-semibold"}>{titles[item.type]}</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Cita del <time dateTime={item.appointmentDate}>{dateFormat.format(new Date(item.appointmentDate))}</time>
-                </p>
+                {item.type === "RESCHEDULED" ? (
+                  <dl className="mt-1 space-y-1 text-sm text-muted-foreground">
+                    {item.previousAppointmentDate && (
+                      <div className="flex flex-wrap gap-x-1">
+                        <dt>Fecha anterior</dt>
+                        <dd><time dateTime={item.previousAppointmentDate}>{dateFormat.format(new Date(item.previousAppointmentDate))}</time></dd>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-x-1">
+                      <dt className="font-medium text-foreground">Nueva fecha</dt>
+                      <dd><time dateTime={item.appointmentDate}>{dateFormat.format(new Date(item.appointmentDate))}</time></dd>
+                    </div>
+                  </dl>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Cita del <time dateTime={item.appointmentDate}>{dateFormat.format(new Date(item.appointmentDate))}</time>
+                  </p>
+                )}
                 <p className="mt-1 text-xs text-muted-foreground">
                   Recibida el <time dateTime={item.createdAt}>{dateFormat.format(new Date(item.createdAt))}</time>
                 </p>
