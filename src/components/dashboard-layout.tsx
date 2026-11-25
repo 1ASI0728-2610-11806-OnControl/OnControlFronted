@@ -232,7 +232,12 @@ export const DashboardLayout = memo(function DashboardLayout({ children }: Dashb
             </div>
 
             <div className="flex items-center gap-3">
-              {user.type !== "ORGANIZATION" && <NotificationsBell key={user.profile.profileId} />}
+              {user.type !== "ORGANIZATION" && (
+                <NotificationsBell
+                  key={user.profile.profileId}
+                  appointmentsHref={user.type === "DOCTOR" ? "/dashboard/medico/citas" : "/dashboard/paciente/citas"}
+                />
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:ring-2 hover:ring-primary/20 transition-all">

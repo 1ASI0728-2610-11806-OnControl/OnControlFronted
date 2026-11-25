@@ -246,6 +246,13 @@ export interface NotificationInbox {
   nextBeforeId: number | null;
 }
 
+export class ApiRequestError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = 'ApiRequestError';
+  }
+}
+
 export class AppointmentScheduleError extends Error {
   constructor(message: string, readonly alternatives: string[]) {
     super(message);
@@ -749,7 +756,7 @@ class ApiClient {
         if (response.status === 409 && Array.isArray(errorData.alternatives)) {
           throw new AppointmentScheduleError(message, errorData.alternatives);
         }
-        throw new Error(message);
+        throw new ApiRequestError(message, response.status);
       }
 
       const data = response.status === 204 ? undefined : await response.json();
@@ -967,8 +974,8 @@ class ApiClient {
     return response.appointments.map(normalizeAppointment);
   }
 
-  async getAppointmentById(id: number): Promise<AppointmentResponse> {
-    return normalizeAppointment(await this.request<AppointmentResponse>(`/api/appointments/${id}`));
+  async getAppointmentById(id: number, signal?: AbortSignal): Promise<AppointmentResponse> {
+    return normalizeAppointment(await this.request<AppointmentResponse>(`/api/appointments/${id}`, { signal }));
   }
 
   async updateAppointmentStatus(
@@ -1386,7 +1393,7 @@ export const appointments = {
     apiClient.createAppointment(doctorProfileId, patientProfileId, data),
   getDoctorAppointments: (doctorProfileId: number) => apiClient.getDoctorAppointments(doctorProfileId),
   getPatientAppointments: (patientProfileId: number) => apiClient.getPatientAppointments(patientProfileId),
-  getById: (id: number) => apiClient.getAppointmentById(id),
+  getById: (id: number, signal?: AbortSignal) => apiClient.getAppointmentById(id, signal),
   updateStatus: (id: number, status: AppointmentResponse['status'], reason?: string) =>
     apiClient.updateAppointmentStatus(id, status, reason),
   reschedule: (id: number, appointmentDate: string) => apiClient.rescheduleAppointment(id, appointmentDate),

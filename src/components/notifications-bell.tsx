@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Bell } from "lucide-react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { apiClient, type AppointmentNotification, type NotificationInbox } from "@/lib/api"
@@ -14,7 +15,7 @@ const titles: Record<AppointmentNotification["type"], string> = {
 
 const dateFormat = new Intl.DateTimeFormat("es-PE", { dateStyle: "medium", timeStyle: "short" })
 
-export function NotificationsBell() {
+export function NotificationsBell({ appointmentsHref }: { appointmentsHref: string }) {
   const [open, setOpen] = useState(false)
   const [inbox, setInbox] = useState<NotificationInbox | null>(null)
   const [error, setError] = useState("")
@@ -110,11 +111,18 @@ export function NotificationsBell() {
                 <p className="mt-1 text-xs text-muted-foreground">
                   Recibida el <time dateTime={item.createdAt}>{dateFormat.format(new Date(item.createdAt))}</time>
                 </p>
-                {!item.readAt && (
-                  <Button variant="link" className="h-auto p-0 pt-2" disabled={busy} onClick={() => void markRead(item)}>
-                    Marcar como leída
+                <div className="mt-1 flex flex-wrap gap-x-4">
+                  <Button asChild variant="link" className="h-8 p-0">
+                    <Link href={`${appointmentsHref}/${item.appointmentId}`} onClick={() => setOpen(false)}>
+                      Ver cita
+                    </Link>
                   </Button>
-                )}
+                  {!item.readAt && (
+                    <Button variant="link" className="h-8 p-0" disabled={busy} onClick={() => void markRead(item)}>
+                      Marcar como leída
+                    </Button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
