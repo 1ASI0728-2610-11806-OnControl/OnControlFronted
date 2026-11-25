@@ -47,29 +47,29 @@ interface UsePatientVitalsReturn {
  * Fetches /latest endpoint on mount and allows manual refresh.
  * Optimized for "One-Shot" device interactions.
  */
-export function usePatientVitals(): UsePatientVitalsReturn {
+export function usePatientVitals(enabled = true): UsePatientVitalsReturn {
   const [data, setData] = useState<EdgeHealthRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<{ message: string; status?: number } | null>(null);
 
   const fetchVitals = useCallback(async () => {
-    setIsLoading(true); // Set loading true on manual refresh
+    if (!enabled) return;
+    setIsLoading(true);
     try {
       const record = await edgeApi.getLatestVitals();
       setData(record);
       setError(null);
     } catch (err) {
-      console.error("Fetch error:", err);
       setData(null);
       if (err instanceof EdgeApiError) {
         setError({ message: err.message, status: err.status });
       } else {
-        setError({ message: err instanceof Error ? err.message : 'Failed to fetch vitals' });
+        setError({ message: 'No pudimos cargar los signos vitales.' });
       }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     fetchVitals();

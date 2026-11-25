@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Activity, AlertTriangle, BrainCircuit, CheckCircle2, Droplets, Loader2, RefreshCw, Thermometer } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -32,8 +32,11 @@ export function RealtimeVitalsCard() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const requestInProgress = useRef(false)
 
   const fetchVitals = useCallback(async (initialLoad = false) => {
+    if (requestInProgress.current) return
+    requestInProgress.current = true
     if (initialLoad) {
       setIsLoading(true)
     } else {
@@ -50,9 +53,10 @@ export function RealtimeVitalsCard() {
         setError(null)
       } else {
         setData(null)
-        setError("No se pudo conectar con EdgeService")
+        setError("El monitor IoT no está disponible en este momento. Puedes volver a intentarlo.")
       }
     } finally {
+      requestInProgress.current = false
       setIsLoading(false)
       setIsRefreshing(false)
     }
@@ -61,7 +65,7 @@ export function RealtimeVitalsCard() {
   useEffect(() => {
     void fetchVitals(true)
     const intervalId = window.setInterval(() => {
-      void fetchVitals(false)
+      if (!document.hidden) void fetchVitals(false)
     }, POLLING_INTERVAL_MS)
 
     return () => window.clearInterval(intervalId)
@@ -91,7 +95,7 @@ export function RealtimeVitalsCard() {
             Signos vitales IoT
           </CardTitle>
           <CardDescription>
-            Ultima actualizacion: {formatUpdatedAt(data?.created_at)}
+            Última actualización: {formatUpdatedAt(data?.created_at)}
           </CardDescription>
         </div>
 
@@ -122,15 +126,15 @@ export function RealtimeVitalsCard() {
         {isLoading ? (
           <div className="flex min-h-32 items-center justify-center text-muted-foreground">
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Cargando datos del EdgeService...
+            Cargando mediciones…
           </div>
         ) : error ? (
-          <div className="flex min-h-32 items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-center text-destructive">
+          <div role="status" className="flex min-h-32 items-center justify-center rounded-lg border bg-muted/30 p-4 text-center text-muted-foreground">
             {error}
           </div>
         ) : !data ? (
           <div className="flex min-h-32 items-center justify-center rounded-lg border bg-muted/30 p-4 text-center text-muted-foreground">
-            Sin datos
+            Aún no hay mediciones de demostración.
           </div>
         ) : (
           <div className="space-y-4">

@@ -31,7 +31,8 @@ export default function PacienteDashboard() {
   const [patientProfileId, setPatientProfileId] = useState<number | null>(null)
   
   // Fetch vitals directly in the dashboard page
-  const { data: vitals, error: vitalsError, refresh, isLoading: isVitalsLoading } = usePatientVitals()
+  const { data: vitals, error: vitalsError, refresh, isLoading: isVitalsLoading } = usePatientVitals(user?.type === "PATIENT")
+  const deviceNotLinked = vitalsError?.status === 404 && vitalsError.message === "No devices claimed by this patient"
 
   useEffect(() => {
     if (user && isPatientUser(user)) {
@@ -145,7 +146,7 @@ export default function PacienteDashboard() {
           <RealtimeVitalsCard />
 
           {/* Vitals Card Integration */}
-          {vitalsError?.status === 403 ? (
+          {deviceNotLinked && (
             <Card className="border-2 border-yellow-200 bg-yellow-50">
                 <CardContent className="p-8 flex flex-col items-center justify-center text-center space-y-4">
                     <div className="p-3 bg-yellow-100 rounded-full">
@@ -156,15 +157,16 @@ export default function PacienteDashboard() {
                         <p className="text-yellow-700 mt-1">Vincula tu banda IoT para ver tus signos vitales en tiempo real.</p>
                     </div>
                     <div className="pt-2">
-                        <ClaimDeviceDialog />
+                        <ClaimDeviceDialog onClaimSuccess={refresh} />
                     </div>
                 </CardContent>
             </Card>
-          ) : (
+          )}
+          {vitals && (
             <div className="space-y-6">
                 <PatientLatestVitals data={vitals} onRefresh={refresh} isRefreshing={isVitalsLoading} />
                 
-                {vitals?.device_id && (
+                {vitals.device_id && (
                     <PatientVitalsHistory 
                         initialDeviceId={vitals.device_id} 
                         currentPatientId={patientProfileId || undefined}
