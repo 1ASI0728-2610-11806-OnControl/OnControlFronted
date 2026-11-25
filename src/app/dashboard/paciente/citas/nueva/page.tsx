@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { AuthGuard } from "@/components/auth-guard-updated"
 import { DashboardLayout } from "@/components/dashboard-layout"
@@ -61,9 +61,10 @@ const locations = [
 export default function NuevaCitaPage() {
   const { user } = useAuthContext()
   const router = useRouter()
-  const [patientProfileId, setPatientProfileId] = useState<number | null>(null)
-  const [doctorProfileId, setDoctorProfileId] = useState<number | null>(null)
-  const [doctorName, setDoctorName] = useState<string>("")
+  const patientProfile = user && isPatientUser(user) ? user.profile : null
+  const patientProfileId = patientProfile?.accountProfileId ?? patientProfile?.id ?? null
+  const doctorProfileId = patientProfile?.doctorAccountProfileId ?? patientProfile?.doctorProfileId ?? null
+  const doctorName = patientProfile?.doctorName || "Tu médico"
   
   const [formData, setFormData] = useState({
     type: "" as AppointmentType | "",
@@ -78,14 +79,6 @@ export default function NuevaCitaPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-
-  useEffect(() => {
-    if (user && isPatientUser(user)) {
-      setPatientProfileId(user.profile.accountProfileId ?? user.profile.id)
-      setDoctorProfileId(user.profile.doctorAccountProfileId ?? user.profile.doctorProfileId)
-      setDoctorName(user.profile.doctorName || "Tu médico")
-    }
-  }, [user])
 
   const handleInputChange = (field: string, value: string | Date | number) => {
     setFormData(prev => ({

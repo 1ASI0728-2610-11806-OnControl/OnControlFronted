@@ -22,7 +22,7 @@ export function RescheduleAppointmentDialog({ appointment, onCancel, onReschedul
   const [error, setError] = useState("")
   const [alternatives, setAlternatives] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
-  const minimum = format(new Date(Date.now() + 24 * 60 * 60 * 1000 + 60000), dateInputFormat)
+  const [minimum] = useState(() => format(new Date(Date.now() + 24 * 60 * 60 * 1000 + 60000), dateInputFormat))
 
   function chooseDate(nextDate: string) {
     setDate(nextDate)

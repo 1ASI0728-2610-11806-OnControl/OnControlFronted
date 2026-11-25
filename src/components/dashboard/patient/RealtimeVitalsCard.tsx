@@ -34,42 +34,41 @@ export function RealtimeVitalsCard() {
   const [error, setError] = useState<string | null>(null)
   const requestInProgress = useRef(false)
 
-  const fetchVitals = useCallback(async (initialLoad = false) => {
+  const fetchVitals = useCallback(() => {
     if (requestInProgress.current) return
     requestInProgress.current = true
-    if (initialLoad) {
-      setIsLoading(true)
-    } else {
-      setIsRefreshing(true)
-    }
 
-    try {
-      const latest = await getLatestHealthParameters()
-      setData(latest)
-      setError(null)
-    } catch (err) {
-      if (err instanceof EdgeApiError && err.status === 404) {
-        setData(null)
+    void getLatestHealthParameters()
+      .then(latest => {
+        setData(latest)
         setError(null)
-      } else {
+      }, (err: unknown) => {
         setData(null)
-        setError("El monitor IoT no está disponible en este momento. Puedes volver a intentarlo.")
-      }
-    } finally {
-      requestInProgress.current = false
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
+        setError(err instanceof EdgeApiError && err.status === 404
+          ? null
+          : "El monitor IoT no está disponible en este momento. Puedes volver a intentarlo.")
+      })
+      .finally(() => {
+        requestInProgress.current = false
+        setIsLoading(false)
+        setIsRefreshing(false)
+      })
   }, [])
 
   useEffect(() => {
-    void fetchVitals(true)
+    fetchVitals()
     const intervalId = window.setInterval(() => {
-      if (!document.hidden) void fetchVitals(false)
+      if (!document.hidden) fetchVitals()
     }, POLLING_INTERVAL_MS)
 
     return () => window.clearInterval(intervalId)
   }, [fetchVitals])
+
+  function refreshVitals() {
+    if (requestInProgress.current) return
+    setIsRefreshing(true)
+    fetchVitals()
+  }
 
   const statusLabel = data?.is_critical ? "Riesgo" : "Normal"
   const statusIcon = data?.is_critical ? AlertTriangle : CheckCircle2
@@ -112,7 +111,7 @@ export function RealtimeVitalsCard() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => void fetchVitals(false)}
+            onClick={refreshVitals}
             disabled={isLoading || isRefreshing}
             title="Actualizar"
           >

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { AuthGuard } from "@/components/auth-guard-updated"
 import { DashboardLayout } from "@/components/dashboard-layout"
@@ -20,20 +20,13 @@ import { Search, Plus, MoreHorizontal, Eye, Calendar, Clock, MapPin, Check, Chec
 
 export default function AppointmentsPage() {
   const { user } = useAuthContext()
-  const [doctorProfileId, setDoctorProfileId] = useState<number | null>(null)
+  const doctorProfileId = user && isDoctorUser(user) ? (user.profile.accountProfileId ?? user.profile.id) : null
   const [appointmentsList, setAppointmentsList] = useState<AppointmentResponse[]>([])
-  const [filteredAppointments, setFilteredAppointments] = useState<AppointmentResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [dateFilter, setDateFilter] = useState("all")
-
-  useEffect(() => {
-    if (user && isDoctorUser(user)) {
-      setDoctorProfileId(user.profile.accountProfileId ?? user.profile.id)
-    }
-  }, [user])
 
   useEffect(() => {
     const loadAppointments = async () => {
@@ -45,7 +38,6 @@ export default function AppointmentsPage() {
         
         const data = await appointments.getDoctorAppointments(doctorProfileId)
         setAppointmentsList(data)
-        setFilteredAppointments(data)
       } catch (err) {
         console.error('Error loading appointments:', err)
         setError('Error al cargar las citas')
@@ -57,7 +49,7 @@ export default function AppointmentsPage() {
     loadAppointments()
   }, [doctorProfileId])
 
-  useEffect(() => {
+  const filteredAppointments = useMemo(() => {
     let filtered = appointmentsList
 
     // Filter by search term
@@ -95,7 +87,7 @@ export default function AppointmentsPage() {
     }
 
     // Sort by appointment date
-    setFilteredAppointments([...filtered].sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime()))
+    return [...filtered].sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime())
   }, [appointmentsList, searchTerm, statusFilter, dateFilter])
 
   const getStatusColor = (status: string) => {

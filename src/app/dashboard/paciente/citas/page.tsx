@@ -32,7 +32,7 @@ import Link from "next/link"
 
 export default function CitasPacientePage() {
   const { user } = useAuthContext()
-  const [patientProfileId, setPatientProfileId] = useState<number | null>(null)
+  const patientProfileId = user && isPatientUser(user) ? (user.profile.accountProfileId ?? user.profile.id) : null
   const [statusFilter, setStatusFilter] = useState("all")
   const [appointments, setAppointments] = useState<AppointmentResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -40,12 +40,6 @@ export default function CitasPacientePage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [actionSuccess, setActionSuccess] = useState("")
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<AppointmentResponse | null>(null)
-
-  useEffect(() => {
-    if (user && isPatientUser(user)) {
-      setPatientProfileId(user.profile.accountProfileId ?? user.profile.id)
-    }
-  }, [user])
 
   useEffect(() => {
     const loadAppointments = async () => {

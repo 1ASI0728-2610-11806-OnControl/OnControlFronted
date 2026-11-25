@@ -1,6 +1,5 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
 import { AuthGuard } from "@/components/auth-guard-updated"
 import { DashboardLayout } from "@/components/dashboard-layout"
@@ -28,17 +27,11 @@ import { RealtimeVitalsCard } from '@/components/dashboard/patient/RealtimeVital
 
 export default function PacienteDashboard() {
   const { user } = useAuthContext()
-  const [patientProfileId, setPatientProfileId] = useState<number | null>(null)
+  const patientProfileId = user && isPatientUser(user) ? user.profile.id : null
   
   // Fetch vitals directly in the dashboard page
   const { data: vitals, error: vitalsError, refresh, isLoading: isVitalsLoading } = usePatientVitals(user?.type === "PATIENT")
   const deviceNotLinked = vitalsError?.status === 404 && vitalsError.message === "No devices claimed by this patient"
-
-  useEffect(() => {
-    if (user && isPatientUser(user)) {
-      setPatientProfileId(user.profile.id)
-    }
-  }, [user])
 
   const { dashboard, isLoading, error, refetch } = usePatientDashboard(patientProfileId)
 

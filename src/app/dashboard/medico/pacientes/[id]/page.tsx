@@ -29,8 +29,7 @@ import {
   AlertTriangle,
   Shield,
   Edit,
-  Stethoscope,
-  Zap // Import Zap icon
+  Stethoscope
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
@@ -43,7 +42,8 @@ export default function PatientDetailsPage() {
   const params = useParams()
   const patientId = params.id as string
   
-  const [doctorProfileId, setDoctorProfileId] = useState<number | null>(null)
+  const doctorProfileId = user && isDoctorUser(user) ? user.profile.id : null
+  const doctorAccountProfileId = user && isDoctorUser(user) ? user.profile.accountProfileId ?? doctorProfileId : null
   const [patient, setPatient] = useState<PatientProfileResponse | null>(null)
   const [appointmentsData, setAppointmentsData] = useState<AppointmentResponse[]>([])
   const [treatmentsData, setTreatmentsData] = useState<TreatmentResponse[]>([])
@@ -51,12 +51,6 @@ export default function PatientDetailsPage() {
   const [allergies, setAllergies] = useState<AllergyResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
-
-  useEffect(() => {
-    if (user && isDoctorUser(user)) {
-      setDoctorProfileId(user.profile.id)
-    }
-  }, [user])
 
   useEffect(() => {
     const loadPatientData = async () => {
@@ -82,9 +76,7 @@ export default function PatientDetailsPage() {
         const patientProfileId = patientData.id
         
         const [appointmentsResult, treatmentsResult, historyData, allergiesData] = await Promise.all([
-          appointmentsApi.getDoctorAppointments(
-            user && isDoctorUser(user) ? (user.profile.accountProfileId ?? doctorProfileId) : doctorProfileId,
-          )
+          appointmentsApi.getDoctorAppointments(doctorAccountProfileId ?? doctorProfileId)
             .then(data => data.filter(apt => apt.patientId === (patientData.accountProfileId ?? patientProfileId)))
             .catch(() => []),
           treatments.getDoctorTreatments(doctorProfileId)
@@ -110,7 +102,7 @@ export default function PatientDetailsPage() {
     }
 
     loadPatientData()
-  }, [doctorProfileId, patientId])
+  }, [doctorProfileId, doctorAccountProfileId, patientId])
 
   const calculateAge = (birthDate?: string) => {
     if (!birthDate) return "N/A"
