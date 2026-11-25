@@ -34,7 +34,8 @@ export default function CalendarPage() {
         setIsLoading(true)
         setError(null)
 
-        const data = await appointments.getDoctorAppointments(getUserId(user))
+        if (user.type !== "DOCTOR") return
+        const data = await appointments.getDoctorAppointments(user.profile.accountProfileId ?? getUserId(user))
         setAppointmentsList(data)
 
       } catch (err) {

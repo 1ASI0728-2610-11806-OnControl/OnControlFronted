@@ -152,11 +152,15 @@ export default function NuevaCitaPage() {
         sendReminder: formData.sendReminder
       }
 
-      const patientId = typeof formData.patientProfileId === 'string' 
-        ? parseInt(formData.patientProfileId) 
-        : formData.patientProfileId;
-      
-      await appointments.create(doctorProfileId, patientId, appointmentData)
+      const patient = patients.find((item) => item.id === Number(formData.patientProfileId))
+      if (!user || !isDoctorUser(user) || !patient) {
+        throw new Error("Selecciona un paciente de tu lista")
+      }
+      await appointments.create(
+        user.profile.accountProfileId ?? doctorProfileId,
+        patient.accountProfileId ?? patient.id,
+        appointmentData,
+      )
       setSuccess(true)
 
       setTimeout(() => {

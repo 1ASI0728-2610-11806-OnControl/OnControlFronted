@@ -81,8 +81,8 @@ export default function NuevaCitaPage() {
 
   useEffect(() => {
     if (user && isPatientUser(user)) {
-      setPatientProfileId(user.profile.id)
-      setDoctorProfileId(user.profile.doctorProfileId)
+      setPatientProfileId(user.profile.accountProfileId ?? user.profile.id)
+      setDoctorProfileId(user.profile.doctorAccountProfileId ?? user.profile.doctorProfileId)
       setDoctorName(user.profile.doctorName || "Tu médico")
     }
   }, [user])

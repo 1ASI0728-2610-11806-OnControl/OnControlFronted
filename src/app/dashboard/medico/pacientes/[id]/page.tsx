@@ -82,8 +82,10 @@ export default function PatientDetailsPage() {
         const patientProfileId = patientData.id
         
         const [appointmentsResult, treatmentsResult, historyData, allergiesData] = await Promise.all([
-          appointmentsApi.getDoctorAppointments(doctorProfileId)
-            .then(data => data.filter(apt => (apt.patientId || apt.patientProfileId) === patientProfileId))
+          appointmentsApi.getDoctorAppointments(
+            user && isDoctorUser(user) ? (user.profile.accountProfileId ?? doctorProfileId) : doctorProfileId,
+          )
+            .then(data => data.filter(apt => apt.patientId === (patientData.accountProfileId ?? patientProfileId)))
             .catch(() => []),
           treatments.getDoctorTreatments(doctorProfileId)
             .then(data => data.filter(t => Number(t.patientProfileId) === patientProfileId))

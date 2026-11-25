@@ -14,6 +14,7 @@ import { useAuthContext } from "@/contexts/auth-context"
 import { appointments as appointmentsApi } from "@/lib/api"
 import type { AppointmentResponse } from "@/lib/api"
 import { isPatientUser } from "@/types/organization"
+import { RescheduleAppointmentDialog } from "@/components/reschedule-appointment-dialog"
 import {
   Calendar,
   Clock,
@@ -36,10 +37,13 @@ export default function CitasPacientePage() {
   const [appointments, setAppointments] = useState<AppointmentResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [actionSuccess, setActionSuccess] = useState("")
+  const [appointmentToReschedule, setAppointmentToReschedule] = useState<AppointmentResponse | null>(null)
 
   useEffect(() => {
     if (user && isPatientUser(user)) {
-      setPatientProfileId(user.profile.id)
+      setPatientProfileId(user.profile.accountProfileId ?? user.profile.id)
     }
   }, [user])
 
@@ -121,17 +125,22 @@ export default function CitasPacientePage() {
   }
 
   const handleCancelAppointment = async (appointmentId: number) => {
+    setActionError(null)
+    setActionSuccess("")
     try {
-      await appointmentsApi.updateStatus(appointmentId, "CANCELLED", "Cancelada por el paciente")
-      // Refresh appointments
-      if (patientProfileId) {
-        const data = await appointmentsApi.getPatientAppointments(patientProfileId)
-        setAppointments(data)
-      }
+      const updated = await appointmentsApi.updateStatus(appointmentId, "CANCELLED", "Cancelada por el paciente")
+      setAppointments((items) => items.map((item) => item.id === updated.id ? updated : item))
+      setActionSuccess("Cita cancelada.")
     } catch (err) {
-      console.error("Error canceling appointment:", err)
-      setError("Error al cancelar la cita")
+      setActionError(err instanceof Error ? err.message : "Error al cancelar la cita")
     }
+  }
+
+  const handleRescheduled = (updated: AppointmentResponse) => {
+    setAppointments((items) => items.map((item) => item.id === updated.id ? updated : item))
+    setAppointmentToReschedule(null)
+    setActionError(null)
+    setActionSuccess("Cita reprogramada.")
   }
 
   const upcomingAppointments = appointments.filter(
@@ -168,6 +177,15 @@ export default function CitasPacientePage() {
     <AuthGuard requiredRole="PATIENT">
       <DashboardLayout>
         <div className="space-y-8">
+          {actionError && <Alert variant="destructive"><AlertDescription>{actionError}</AlertDescription></Alert>}
+          {actionSuccess && <p role="status" className="text-sm font-medium text-primary">{actionSuccess}</p>}
+          {appointmentToReschedule && (
+            <RescheduleAppointmentDialog
+              appointment={appointmentToReschedule}
+              onCancel={() => setAppointmentToReschedule(null)}
+              onRescheduled={handleRescheduled}
+            />
+          )}
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
             <div className="space-y-2">
@@ -359,9 +377,16 @@ export default function CitasPacientePage() {
                     <div className="flex flex-col gap-2">
                       {(appointment.status === "SCHEDULED" || appointment.status === "CONFIRMED") && (
                         <>
-                          <Button variant="outline" size="sm" className="border-2 hover:bg-primary hover:text-primary-foreground">
-                            Reprogramar
-                          </Button>
+                          {isFuture(parseISO(appointment.appointmentDate)) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-2 hover:bg-primary hover:text-primary-foreground"
+                              onClick={() => setAppointmentToReschedule(appointment)}
+                            >
+                              Reprogramar
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"

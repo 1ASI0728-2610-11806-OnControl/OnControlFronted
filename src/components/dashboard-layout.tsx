@@ -31,11 +31,13 @@ import {
   Wifi,
   ChevronLeft,
   ChevronRight,
+  CreditCard,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useAuthContext } from "@/contexts/auth-context"
 import { Loading } from "./loading"
+import { NotificationsBell } from "./notifications-bell"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -78,6 +80,9 @@ export const DashboardLayout = memo(function DashboardLayout({ children }: Dashb
     { href: "/dashboard/paciente/medicamentos", icon: Stethoscope, label: "Medicamentos", badge: null },
     { href: "/dashboard/paciente/historial", icon: FileText, label: "Historial", badge: null },
     { href: "/dashboard/paciente/iot", icon: Wifi, label: "Monitor IoT", badge: null },
+    ...(process.env.NEXT_PUBLIC_PAYMENTS_DEMO === "true"
+      ? [{ href: "/dashboard/paciente/pagos", icon: CreditCard, label: "Métodos de pago", badge: null }]
+      : []),
   ], [])
 
   const navItems = useMemo(() => {
@@ -227,6 +232,7 @@ export const DashboardLayout = memo(function DashboardLayout({ children }: Dashb
             </div>
 
             <div className="flex items-center gap-3">
+              {user.type !== "ORGANIZATION" && <NotificationsBell key={user.profile.profileId} />}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:ring-2 hover:ring-primary/20 transition-all">

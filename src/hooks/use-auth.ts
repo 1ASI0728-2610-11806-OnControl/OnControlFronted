@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { startTransition, useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   auth, 
@@ -80,40 +80,18 @@ export function useAuth() {
 
   // Load user from localStorage on mount
   useEffect(() => {
-    const loadUser = async () => {
-      if (typeof window === 'undefined') return
-      
-      try {
-        const token = localStorage.getItem('auth_token')
-        const userType = localStorage.getItem('userType') as 'ORGANIZATION' | 'DOCTOR' | 'PATIENT' | null
-        const userDataStr = localStorage.getItem('userData')
-        
-        if (token && userType && userDataStr) {
-          const userData = JSON.parse(userDataStr)
-          
-          setAuthState({
-            user: userData as User,
-            isLoading: false,
-            isAuthenticated: true,
-          })
-        } else {
-          setAuthState({
-            user: null,
-            isLoading: false,
-            isAuthenticated: false,
-          })
-        }
-      } catch (error) {
-        console.error('Failed to load user:', error)
-        setAuthState({
-          user: null,
-          isLoading: false,
-          isAuthenticated: false,
-        })
-      }
+    let user: User | null = null
+    try {
+      const token = localStorage.getItem('auth_token')
+      const userType = localStorage.getItem('userType')
+      const userData = localStorage.getItem('userData')
+      if (token && userType && userData) user = JSON.parse(userData) as User
+    } catch (error) {
+      console.error('Failed to load user:', error)
     }
 
-    loadUser()
+    // Allow streamed dashboard routes to hydrate their loading state before restoring the session.
+    startTransition(() => setAuthState({ user, isLoading: false, isAuthenticated: user !== null }))
   }, [])
 
   const login = useCallback(async (credentials: LoginRequest) => {

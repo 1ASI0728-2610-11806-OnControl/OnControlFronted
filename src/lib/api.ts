@@ -108,6 +108,7 @@ export interface CreatePatientRequest {
 
 export interface DoctorProfileResponse {
   id: number;
+  accountProfileId?: number;
   profileId: string;
   email: string;
   firstName: string;
@@ -151,6 +152,8 @@ export interface PatientResponse {
 // Full Patient Profile Response (extended)
 export interface PatientProfileResponse {
   id: number;
+  accountProfileId?: number;
+  doctorAccountProfileId?: number;
   profileId: string;
   email: string;
   firstName: string;
@@ -218,7 +221,7 @@ export interface AppointmentResponse {
   appointmentDate: string;
   durationMinutes: number;
   type: AppointmentType;
-  status: 'SCHEDULED' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+  status: 'SCHEDULED' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW' | 'RESCHEDULED';
   location?: string;
   notes?: string;
   preparationInstructions?: string;
@@ -226,6 +229,44 @@ export interface AppointmentResponse {
   cancellationReason?: string;
   completedAt?: string;
   cancelledAt?: string;
+}
+
+export interface AppointmentNotification {
+  id: number;
+  appointmentId: number;
+  type: 'SCHEDULED' | 'CANCELLED' | 'RESCHEDULED';
+  appointmentDate: string;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export interface NotificationInbox {
+  items: AppointmentNotification[];
+  unreadCount: number;
+  nextBeforeId: number | null;
+}
+
+export class AppointmentScheduleError extends Error {
+  constructor(message: string, readonly alternatives: string[]) {
+    super(message);
+    this.name = 'AppointmentScheduleError';
+  }
+}
+
+export type DemoPaymentScenario = 'VALID_VISA' | 'VALID_MASTERCARD' | 'DECLINED' | 'EXPIRED';
+
+export interface DemoPaymentMethod {
+  id: number;
+  brand: string;
+  lastFour: string;
+  createdAt: string;
+}
+
+function normalizeAppointment(appointment: AppointmentResponse): AppointmentResponse {
+  const appointmentDate = /(?:Z|[+-]\d{2}:\d{2})$/.test(appointment.appointmentDate)
+    ? appointment.appointmentDate
+    : `${appointment.appointmentDate}Z`;
+  return { ...appointment, appointmentDate };
 }
 
 // Symptom Types
@@ -699,15 +740,19 @@ class ApiClient {
         // Log 404 as info (expected when resource doesn't exist)
         if (response.status === 404) {
           console.log('ℹ️  API 404 - Resource not found:', { url, status: 404 });
-        } else {
+        } else if (response.status >= 500) {
           // Log other errors as actual errors
           console.error('❌ API Error:', { url, status: response.status, errorData });
         }
         
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        const message = errorData.message || `HTTP error! status: ${response.status}`;
+        if (response.status === 409 && Array.isArray(errorData.alternatives)) {
+          throw new AppointmentScheduleError(message, errorData.alternatives);
+        }
+        throw new Error(message);
       }
 
-      const data = await response.json();
+      const data = response.status === 204 ? undefined : await response.json();
       
       if (DEBUG_API) {
         console.log('✅ API Success:', { url, data });
@@ -905,25 +950,25 @@ class ApiClient {
       body: JSON.stringify(data),
       }
     );
-    return response.appointment;
+    return normalizeAppointment(response.appointment);
   }
 
   async getDoctorAppointments(doctorProfileId: number): Promise<AppointmentResponse[]> {
     const response = await this.request<{ appointments: AppointmentResponse[] }>(
       `/api/appointments/doctor/${doctorProfileId}`
     );
-    return response.appointments;
+    return response.appointments.map(normalizeAppointment);
   }
 
   async getPatientAppointments(patientProfileId: number): Promise<AppointmentResponse[]> {
     const response = await this.request<{ appointments: AppointmentResponse[] }>(
       `/api/appointments/patient/${patientProfileId}`
     );
-    return response.appointments;
+    return response.appointments.map(normalizeAppointment);
   }
 
   async getAppointmentById(id: number): Promise<AppointmentResponse> {
-    return this.request<AppointmentResponse>(`/api/appointments/${id}`);
+    return normalizeAppointment(await this.request<AppointmentResponse>(`/api/appointments/${id}`));
   }
 
   async updateAppointmentStatus(
@@ -938,7 +983,39 @@ class ApiClient {
       `/api/appointments/${id}/status?${params.toString()}`,
       { method: 'PATCH' }
     );
-    return response.appointment;
+    return normalizeAppointment(response.appointment);
+  }
+
+  async rescheduleAppointment(id: number, appointmentDate: string): Promise<AppointmentResponse> {
+    const response = await this.request<{ appointment: AppointmentResponse }>(
+      `/api/appointments/${id}/schedule`,
+      { method: 'PATCH', body: JSON.stringify({ appointmentDate }) },
+    );
+    return normalizeAppointment(response.appointment);
+  }
+
+  async getNotificationInbox(beforeId?: number, signal?: AbortSignal): Promise<NotificationInbox> {
+    const query = beforeId === undefined ? '' : `?beforeId=${beforeId}`;
+    return this.request<NotificationInbox>(`/api/notifications/me${query}`, { signal });
+  }
+
+  async markNotificationRead(id: number): Promise<AppointmentNotification> {
+    return this.request<AppointmentNotification>(`/api/notifications/me/${id}/read`, { method: 'PUT' });
+  }
+
+  async listDemoPaymentMethods(signal?: AbortSignal): Promise<DemoPaymentMethod[]> {
+    return this.request<DemoPaymentMethod[]>('/api/payment-methods/demo', { signal });
+  }
+
+  async addDemoPaymentMethod(scenario: DemoPaymentScenario): Promise<DemoPaymentMethod> {
+    return this.request<DemoPaymentMethod>('/api/payment-methods/demo', {
+      method: 'POST',
+      body: JSON.stringify({ scenario }),
+    });
+  }
+
+  async removeDemoPaymentMethod(id: number): Promise<void> {
+    await this.request<void>(`/api/payment-methods/demo/${id}`, { method: 'DELETE' });
   }
 
   async addAppointmentFollowUp(id: number, notes: string): Promise<AppointmentResponse> {
@@ -1312,6 +1389,7 @@ export const appointments = {
   getById: (id: number) => apiClient.getAppointmentById(id),
   updateStatus: (id: number, status: AppointmentResponse['status'], reason?: string) =>
     apiClient.updateAppointmentStatus(id, status, reason),
+  reschedule: (id: number, appointmentDate: string) => apiClient.rescheduleAppointment(id, appointmentDate),
   addFollowUp: (id: number, notes: string) => apiClient.addAppointmentFollowUp(id, notes),
 };
 

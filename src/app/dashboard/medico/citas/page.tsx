@@ -31,7 +31,7 @@ export default function AppointmentsPage() {
 
   useEffect(() => {
     if (user && isDoctorUser(user)) {
-      setDoctorProfileId(user.profile.id)
+      setDoctorProfileId(user.profile.accountProfileId ?? user.profile.id)
     }
   }, [user])
 
@@ -95,9 +95,7 @@ export default function AppointmentsPage() {
     }
 
     // Sort by appointment date
-    filtered.sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime())
-
-    setFilteredAppointments(filtered)
+    setFilteredAppointments([...filtered].sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime()))
   }, [appointmentsList, searchTerm, statusFilter, dateFilter])
 
   const getStatusColor = (status: string) => {
